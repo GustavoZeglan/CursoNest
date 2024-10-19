@@ -1,0 +1,18 @@
+meta {
+  name: update user
+  type: http
+  seq: 5
+}
+
+patch {
+  url: http://localhost:3000/user/1
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Gustavo Zeglan",
+    "age": 19
+  }
+}
