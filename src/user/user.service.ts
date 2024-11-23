@@ -1,63 +1,70 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './data/user.entity';
 
 @Injectable()
 export class UserService {
 
-    private lastId: number = 1;
-    private users = [
-        {
-            id: 1,
-            name: "JamalOlinda",
-            age: 19
-        }
-    ];
+    constructor(
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>
+    ) {}
 
 
-    getUsers() {
-        return this.users;
+    async getUsers() {
+        const users = await this.userRepository.find({
+            select: ["id", "name", "age", "email"]
+        });
+
+        return users;
     }
 
-    getUserById(userId: number) {
-        const user = this.users.find((user) => user.id === userId)
+    async getUserById(userId: number) {
+        const user = await this.userRepository.findOne({
+            where: {
+                id: userId,
+            },
+            select: ["id", "name", "age", "email"]
+        })
 
-        if (!user) {
-            throw new NotFoundException("User not found.");
+        if(!user) {
+            throw new NotFoundException("User not found");
         }
 
         return user;
     }
 
     createUser(user: CreateUserDTO) {
-        const newUser = {
-            id: ++this.lastId, 
-            ...user
-        }
-
-        this.users.push(newUser);
-
-        return newUser;
+        const newUser = this.userRepository.create(user);
+        return this.userRepository.save(newUser);
     }
 
     updateUser(userId: number, user: UpdateUserDTO) {
+        const usersCount = this.userRepository.countBy({
+            id: userId
+        });
 
-        const userIndex = this.users.findIndex((user) => user.id === userId);
-        
-        if (userIndex === -1) {
-            throw new NotFoundException("User not found.");
+        if (!usersCount) {
+            throw new NotFoundException("User not founf");
         }
 
-        const userToUpdate = this.users[userIndex];
+        const userForUpdate = this.userRepository.create({
+            ...user,
+            id: userId,
+        });
 
-        const updatedUser = {
-            ...userToUpdate,
-            ...user
-        }
+        return this.userRepository.save(userForUpdate);
+    }
 
-        this.users[userIndex] = updatedUser;
-
-        return updatedUser;
+    async getUserByEmail(email: string): Promise<User | null> {
+        return this.userRepository.findOne({
+            where: {
+                email
+            }
+        });
     }
 
 }
